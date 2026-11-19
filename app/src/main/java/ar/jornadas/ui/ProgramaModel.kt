@@ -4,12 +4,13 @@ import android.app.Application
 import androidx.lifecycle.*
 import ar.jornadas.Servicios
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
 
 class ProgramaModel(app: Application, private val estado: SavedStateHandle) : AndroidViewModel(app) {
-    private val servicios = Servicios(app)
+    private val servicios = Servicios.de(app)
     val mesa = servicios.mesa
     private val repo = servicios.agenda
     val charlas = repo.programa.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -23,9 +24,20 @@ class ProgramaModel(app: Application, private val estado: SavedStateHandle) : An
 
     val aviso = MutableStateFlow("")
     val cargando = MutableStateFlow(false)
+    private var descarga: Job? = null
 
+    // Una carga automática por proceso: rotar o recrear la Activity no vuelve a descargar.
+    init {
+        if (!servicios.cargaInicialHecha) {
+            servicios.cargaInicialHecha = true
+            recargar()
+        }
+    }
+
+    // Si ya hay una descarga en curso, los toques extra se ignoran.
     fun recargar() {
-        viewModelScope.launch {
+        if (descarga?.isActive == true) return
+        descarga = viewModelScope.launch {
             cargando.value = true
             aviso.value = ""
             try {
