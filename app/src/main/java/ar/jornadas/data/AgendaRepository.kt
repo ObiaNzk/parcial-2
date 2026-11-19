@@ -2,6 +2,7 @@ package ar.jornadas.data
 
 class AgendaRepository(private val api: ProgramaApi, private val dao: CarteleraDao) {
     val programa = dao.observar()
+    val hayEdicion = dao.observarEdicion()
 
     suspend fun sincronizar() {
         val fichas = api.consultar().map {
@@ -9,6 +10,8 @@ class AgendaRepository(private val api: ProgramaApi, private val dao: CarteleraD
         }
         dao.reemplazarPrograma(fichas)
     }
+
+    suspend fun hayEdicionGuardada() = dao.hayEdicion()
 
     suspend fun cambiarFavorita(id: String) = dao.alternar(id)
 }

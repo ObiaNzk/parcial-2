@@ -16,8 +16,21 @@ data class Charla(@PrimaryKey val id: String, val titulo: String, val tema: Stri
     val hora: String, val sala: String, val ponente: String, val resumen: String,
     val favorita: Boolean = false)
 
+// Una sola fila: existe si alguna vez se guardó una edición completa (aunque venga vacía).
+@Entity(tableName = "edicion")
+data class Edicion(@PrimaryKey val id: Int = 1, val descargadaEn: Long)
+
 @Dao
 interface CarteleraDao {
+    @Query("SELECT EXISTS(SELECT 1 FROM edicion)")
+    fun observarEdicion(): Flow<Boolean>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM edicion)")
+    suspend fun hayEdicion(): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarEdicion(edicion: Edicion)
+
     @Query("SELECT * FROM charlas ORDER BY dia, hora, sala")
     fun observar(): Flow<List<Charla>>
 
@@ -41,10 +54,20 @@ interface CarteleraDao {
         val marcadas = favoritas().toSet()
         borrarTodo()
         guardar(nuevas.map { it.copy(favorita = it.id in marcadas) })
+        guardarEdicion(Edicion(descargadaEn = System.currentTimeMillis()))
     }
 }
 
-@Database(entities = [Charla::class], version = 1, exportSchema = false)
+@Database(entities = [Charla::class, Edicion::class], version = 2, exportSchema = false)
 abstract class Archivo : RoomDatabase() {
     abstract fun cartelera(): CarteleraDao
+}
+
+// v1 -> v2: crea la tabla edicion sin tocar charlas ni favoritas.
+// Si el usuario ya tenía charlas guardadas, cuenta como edición previa.
+val MIGRACION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `edicion` (`id` INTEGER NOT NULL, `descargadaEn` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+        db.execSQL("INSERT INTO edicion (id, descargadaEn) SELECT 1, 0 WHERE EXISTS (SELECT 1 FROM charlas)")
+    }
 }

@@ -47,11 +47,23 @@ class OfflineProgramTest {
         }
     }
 
+    @Test fun emptyEditionIsValidWhenReopeningOffline() {
+        setService(available = true, revision = 4)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitForText("Sin charlas programadas")
+        }
+        setService(available = false)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitForText("Sin conexión: usando datos guardados")
+            compose.onNodeWithText("Sin charlas programadas").assertIsDisplayed()
+        }
+    }
+
     // Same preferences file used by the Mesa screen.
-    private fun setService(available: Boolean) {
+    private fun setService(available: Boolean, revision: Int = 1) {
         context.getSharedPreferences("mesa", Context.MODE_PRIVATE).edit()
             .putBoolean("disponible", available)
-            .putInt("revision", 1)
+            .putInt("revision", revision)
             .putBoolean("demoraLarga", false)
             .commit()
     }

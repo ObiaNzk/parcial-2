@@ -5,6 +5,7 @@ import androidx.lifecycle.*
 import ar.jornadas.Servicios
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import java.io.IOException
 
 class ProgramaModel(app: Application, private val estado: SavedStateHandle) : AndroidViewModel(app) {
@@ -12,6 +13,7 @@ class ProgramaModel(app: Application, private val estado: SavedStateHandle) : An
     val mesa = servicios.mesa
     private val repo = servicios.agenda
     val charlas = repo.programa.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val hayEdicion = repo.hayEdicion.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // Filtros en el SavedStateHandle: sobreviven a la rotación y a la muerte del proceso.
     val dia = estado.getStateFlow("dia", 0)
@@ -28,8 +30,9 @@ class ProgramaModel(app: Application, private val estado: SavedStateHandle) : An
             aviso.value = ""
             try {
                 repo.sincronizar()
-            } catch (e: IOException) {
-                aviso.value = if (charlas.value.isNotEmpty()) {
+            } catch (e: Exception) {
+                if (e !is IOException && e !is HttpException) throw e
+                aviso.value = if (repo.hayEdicionGuardada()) {
                     "Sin conexión: usando datos guardados"
                 } else {
                     "No se pudo descargar el programa"
