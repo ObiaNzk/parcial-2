@@ -23,7 +23,11 @@ class ProgramaModel(app: Application) : AndroidViewModel(app) {
             try {
                 repo.sincronizar()
             } catch (e: IOException) {
-                aviso.value = "No se pudo consultar el programa"
+                aviso.value = if (charlas.value.isNotEmpty()) {
+                    "Sin conexión: usando datos guardados"
+                } else {
+                    "No se pudo descargar el programa"
+                }
             } finally {
                 cargando.value = false
             }

@@ -27,9 +27,8 @@ fun Catalogo(model: ProgramaModel, abrir: (String) -> Unit) {
     if (aviso.isNotEmpty()) {
         Text(aviso)
         OutlinedButton(onClick = model::recargar) { Text("Reintentar") }
-    } else {
-        Grilla(fichas.filter { (dia == 0 || it.dia == dia) && (tema == "Todos" || it.tema == tema) }, abrir)
     }
+    Grilla(fichas.filter { (dia == 0 || it.dia == dia) && (tema == "Todos" || it.tema == tema) }, abrir)
 }
 
 @Composable
